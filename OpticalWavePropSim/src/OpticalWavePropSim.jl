@@ -9,7 +9,7 @@ using FFTW
 using SpecialFunctions # For besselj, fresnelc, fresnels, and gamma
 using Statistics       # For mean
 
-export ft, ift, ft2, ift2, rect, tri, jinc, circ,
+export ft, ift, ft2, ift2, myconv, myconv2, rect, tri, jinc, circ,
     ang_spec_multi_prop, ang_spec_prop, corr2_ft,
     ft_phase_screen, ft_sh_phase_screen, zernike
 
@@ -24,29 +24,51 @@ function ift(G, delta_f)
 end
 
 function ft2(g, delta)
-    return fftshift(fft2(fftshift(g))) * (delta^2)
+    G = fftshift(fft(fftshift(g))) * delta^2
+    return G
 end
+
+using FFTW
 
 function ift2(G, delta_f)
     N = size(G, 1)
-    return ifftshift(ifft2(ifftshift(G))) * (N * delta_f)^2
+    g = ifftshift(ifft(ifftshift(G))) * (N * delta_f)^2
+    return g
 end
 
+function myconv(A, B, delta)
+    N = length(A)
+    C = ift(ft(A, delta) .* ft(B, delta), 1 / (N * delta))
+    return C
+end
+
+function myconv2(A, B, delta)
+    N = size(A, 1)
+    df = 1 / (N * delta)
+    C = ift2(ft2(A, delta) .* ft2(B, delta), df)
+    return C
+end
 # --- Basic Optical Functions ---
 
 function rect(x, D=1.0)
-    x_abs = abs.(x)
-    y = float.(x_abs .< D / 2)
-    y[x_abs.==D/2] .= 0.5
-    return y
+    # logic for a single scalar value
+    x_abs = abs(x)
+    if x_abs < D / 2
+        return 1.0
+    elseif x_abs == D / 2
+        return 0.5
+    else
+        return 0.0
+    end
 end
 
 function tri(t)
-    t_abs = abs.(t)
-    y = zeros(size(t))
-    idx = t_abs .< 1.0
-    y[idx] = 1.0 .- t_abs[idx]
-    return y
+    t_abs = abs(t)
+    if t_abs < 1.0
+        return 1.0 - t_abs
+    else
+        return 0.0
+    end
 end
 
 function jinc(x)
