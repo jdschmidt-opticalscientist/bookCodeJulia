@@ -10,7 +10,8 @@ using SpecialFunctions # For besselj, fresnelc, fresnels, and gamma
 using Statistics       # For mean
 
 export ft, ift, ft2, ift2, myconv, myconv2, rect, tri, jinc, circ,
-    ang_spec_multi_prop, ang_spec_prop, corr2_ft,
+    ang_spec_multi_prop, ang_spec_prop, corr2_ft, derivative_ft,
+    gradient_ft, str_fcn2_ft,
     ft_phase_screen, ft_sh_phase_screen, zernike
 
 # --- Fourier Transform Utilities ---
@@ -27,8 +28,6 @@ function ft2(g, delta)
     G = fftshift(fft(fftshift(g))) * delta^2
     return G
 end
-
-using FFTW
 
 function ift2(G, delta_f)
     N = size(G, 1)
@@ -201,18 +200,103 @@ function corr2_ft(u1, u2, mask, delta)
     N = size(u1, 1)
     delta_f = 1 / (N * delta)
 
+    # DFTs of masked signals
     U1 = ft2(u1 .* mask, delta)
     U2 = ft2(u2 .* mask, delta)
+
+    # Cross-correlation in frequency domain
     U12corr = ift2(conj.(U1) .* U2, delta_f)
 
+    # Area and mask normalization
+    areamask = sum(mask) * delta^2
+    # Mask autocorrelation
+    maskcorr = ift2(abs.(ft2(mask, delta)) .^ 2, delta_f) / areamask
+
+    # Logical indexing for valid mask overlap
+    idx = real.(maskcorr) .>= (delta^2 / areamask)
+
+    # Pre-allocate complex result array
+    c = zeros(ComplexF64, N, N)
+
+    # Perform division only where mask overlap is sufficient
+    # We use .= to broadcast the assignment into the subset of c
+    c[idx] .= U12corr[idx] ./ maskcorr[idx]
+
+    return c, idx
+end
+
+function derivative_ft(g, delta, n)
+    # function der = derivative_ft(g, delta, n)
+    N = length(g)
+    # frequency domain grid spacing [1/m]
+    F = 1 / (N * delta)
+    # frequency values range
+    f_X = (-N/2:N/2-1) * F
+
+    # Fourier derivative property: F{g^(n)} = (i*2*pi*f)^n * F{g}
+    # Note the use of .^ and .* for element-wise operations
+    der = ift((im * 2 * π * f_X) .^ n .* ft(g, delta), F)
+
+    return der
+end
+
+function gradient_ft(g, delta)
+    # function [gx gy] = gradient_ft(g, delta)
+    N = size(g, 1)   # number of samples per side
+    # grid spacing in the frequency domain [1/m]
+    F = 1 / (N * delta)
+
+    # Create frequency vectors and 2D grids
+    f_vec = (-N/2:N/2-1) * F
+    fX = repeat(f_vec', N, 1)
+    fY = repeat(f_vec, 1, N)
+
+    # Pre-calculate the FT of the input to avoid redundant transforms
+    G = ft2(g, delta)
+
+    # Fourier Gradient Property: F{∂g/∂x} = (i*2*pi*fX) * F{g}
+    gx = ift2(im * 2 * π * fX .* G, F)
+    gy = ift2(im * 2 * π * fY .* G, F)
+
+    return gx, gy
+end
+
+function str_fcn2_ft(ph, mask, delta)
+    # ph: phase screen matrix
+    # mask: aperture mask matrix
+    # delta: grid spacing [m]
+
+    N = size(ph, 1)
+    ph_masked = ph .* mask
+
+    # Fourier Transforms
+    P = ft2(ph_masked, delta)
+    S = ft2(ph_masked .^ 2, delta)
+    W = ft2(mask, delta)
+
+    delta_f = 1 / (N * delta)
+
+    # Weighting and intermediate terms
+    # Using conj. for element-wise conjugation
+    w2 = ift2(W .* conj.(W), delta_f)
+
+    # Phase structure function calculation
+    # We take the real part of the numerator terms as per the mathematical definition
+    num = real.(S .* conj.(W)) .- abs.(P) .^ 2
+    D = 2 * ift2(num, delta_f) ./ w2
+
+    # Mask normalization and safety indexing (from your Python version)
     areamask = sum(mask) * delta^2
     maskcorr = ift2(abs.(ft2(mask, delta)) .^ 2, delta_f) / areamask
 
-    idx = maskcorr .>= (delta^2 / areamask)
-    c = zeros(ComplexF64, N, N)
-    c[idx] = U12corr[idx] ./ maskcorr[idx]
+    # Avoid division by zero/noise in regions outside the mask overlap
+    idx = real.(maskcorr) .>= (delta^2 / areamask)
 
-    return c, idx
+    # Final result: ensure it's real and zeroed out where invalid
+    D_real = zeros(Float64, N, N)
+    D_real[idx] .= real.(D[idx])
+
+    return D_real, idx
 end
 
 function _zrf(n, m, r)
