@@ -328,25 +328,55 @@ end
 
 function _zrf(n, m, r)
     R = zeros(size(r))
+    # n-m must be even and non-negative
+    if (n - m) % 2 != 0 || n < m
+        return R
+    end
+
     for s in 0:Int((n - m) / 2)
         num = (-1)^s * gamma(n - s + 1)
-        denom = gamma(s + 1) * gamma((n + m) / 2 - s + 1) * gamma((n - m) / 2 - s + 1)
+        denom = (gamma(s + 1) * gamma((n + m) / 2 - s + 1) * gamma((n - m) / 2 - s + 1))
+        # Use .^ for element-wise power on the radius matrix
         R .+= (num / denom) .* r .^ (n - 2 * s)
     end
     return R
 end
 
-function zernike(i, r, theta, zernike_index)
-    n = Int(zernike_index[i, 1])
-    m = Int(zernike_index[i, 2])
-    if m == 0
-        return sqrt(n + 1) .* _zrf(n, 0, r)
+function noll_to_nm(j)
+    # Corrected Noll to (n, m) mapping
+    n = Int(floor((sqrt(8 * j - 7) - 1) / 2))
+    m_abs = j - n * (n + 1) ÷ 2 - 1
+
+    if n % 2 == 0
+        m = 2 * (m_abs ÷ 2)
     else
-        if i % 2 == 0
-            return sqrt(2 * (n + 1)) .* _zrf(n, m, r) .* cos.(m .* theta)
-        else
-            return sqrt(2 * (n + 1)) .* _zrf(n, m, r) .* sin.(m .* theta)
-        end
+        m = 2 * ((m_abs + 1) ÷ 2) - 1
+    end
+
+    if j % 2 > 0
+        m = -m
+    end
+    return n, m
+end
+
+function zernike(j, r, theta, z_map=nothing)
+    # Use mapping if provided, otherwise default to Noll
+    if !isnothing(z_map) && haskey(z_map, j)
+        n, m_val = z_map[j]
+    else
+        n, m_val = noll_to_nm(j)
+    end
+
+    m = abs(m_val)
+    # Epsilon boundary check using Julia's ternary broadcasting
+    r_safe = [(val <= 1.000001) ? val : 0.0 for val in r]
+
+    if m == 0
+        return sqrt(n + 1) .* _zrf(n, 0, r_safe)
+    elseif j % 2 == 0
+        return sqrt(2 * (n + 1)) .* _zrf(n, m, r_safe) .* cos.(m .* theta)
+    else
+        return sqrt(2 * (n + 1)) .* _zrf(n, m, r_safe) .* sin.(m .* theta)
     end
 end
 
