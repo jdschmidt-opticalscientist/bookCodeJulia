@@ -10,7 +10,7 @@ using SpecialFunctions # For besselj, fresnelc, fresnels, and gamma
 using Statistics       # For mean
 
 export ft, ift, ft2, ift2, myconv, myconv2, rect, tri, jinc, circ,
-    ang_spec_multi_prop, ang_spec_prop, corr2_ft, derivative_ft,
+    fraunhofer_prop, ang_spec_multi_prop, ang_spec_prop, corr2_ft, derivative_ft,
     gradient_ft, str_fcn2_ft,
     ft_phase_screen, ft_sh_phase_screen, zernike
 
@@ -71,10 +71,14 @@ function tri(t)
 end
 
 function jinc(x)
-    y = ones(size(x))
-    idx = x .!= 0
-    y[idx] = 2.0 .* besselj.(1, π .* x[idx]) ./ (π .* x[idx])
-    return y
+    # Handle the limit at x = 0 to avoid division by zero
+    if x == 0
+        return 1.0
+    else
+        # Bessel function of the first kind, order 1: J1(pi*x) / (2*pi*x)
+        # Note: Using SpecialFunctions.besselj or similar
+        return 2 * besselj1(π * x) / (π * x)
+    end
 end
 
 function circ(x, y, D=1.0)
@@ -83,6 +87,29 @@ function circ(x, y, D=1.0)
 end
 
 # --- Propagation Algorithms ---
+
+function fraunhofer_prop(Uin, wvl, d1, Dz)
+    # function [Uout x2 y2] = fraunhofer_prop(Uin, wvl, d1, Dz)
+    N = size(Uin, 1)    # assume square grid
+    k = 2 * π / wvl     # optical wavevector
+
+    # Frequency-domain grid spacing
+    f_vec = (-N/2:N/2-1) / (N * d1)
+
+    # Observation-plane coordinates: x2 = wvl * Dz * fx
+    v = wvl * Dz * f_vec
+    x2 = repeat(v', N, 1)
+    y2 = repeat(v, 1, N)
+
+    # Fraunhofer propagation formula:
+    # Uout(x2,y2) = exp(i*k/(2*z)*(x2^2+y2^2)) / (i*wvl*z) * FT{Uin}
+    # Note: ft2 handles the delta^2 scaling internally
+    Uout = (exp.(im * k / (2 * Dz) .* (x2 .^ 2 .+ y2 .^ 2))
+            /
+            (im * wvl * Dz) .* ft2(Uin, d1))
+
+    return Uout, x2, y2
+end
 
 function ang_spec_multi_prop(Uin, wvl, delta1, deltan, z, t)
     N = size(Uin, 1)
