@@ -11,7 +11,7 @@ using Statistics: mean
 
 export ft, ift, ft2, ift2, myconv, myconv2, rect, tri, jinc, circ,
     fraunhofer_prop, ang_spec_multi_prop, ang_spec_prop, ang_spec_propABCD,
-    one_step_prop, two_step_prop,
+    one_step_prop, two_step_prop, ang_spec_multi_prop_vac,
     ft_phase_screen, ft_sh_phase_screen, zernike, fresnel_prop_square_ap
 
 
@@ -307,6 +307,58 @@ function two_step_prop(Uin, wvl, d1, d2, Dz)
     Uout = 1 / (im * wvl * Dz2) .* exp.(im * k / (2 * Dz2) .* (x2 .^ 2 .+ y2 .^ 2)) .* ft2(Uitm .* exp.(im * k / (2 * Dz2) .* (x1a .^ 2 .+ y1a .^ 2)), d1a)
 
     return x2, y2, Uout
+end
+
+function ang_spec_multi_prop_vac(Uin, wvl, delta1, deltan, z)
+    # function [xn yn Uout] = ang_spec_multi_prop_vac ...
+    #     (Uin, wvl, delta1, deltan, z)
+    N = size(Uin, 1)   # number of grid points
+    v = collect(-N/2:1:N/2-1)
+    nx = repeat(v', N, 1)
+    ny = repeat(v, 1, N)
+    k = 2 * π / wvl    # optical wavevector
+    # super-Gaussian absorbing boundary
+    nsq = nx .^ 2 .+ ny .^ 2
+    w = 0.47 * N
+    sg = exp.(-nsq .^ 8 ./ w^16) # element-wise exponentiation
+
+    # propagation plane locations
+    z_planes = [0.0; vec(collect(z))]
+    n = length(z_planes)
+    # propagation distances
+    Delta_z = diff(z_planes)
+    # grid spacings
+    alpha = z_planes ./ z_planes[n]
+    delta = (1 .- alpha) .* delta1 .+ alpha .* deltan
+    m = delta[2:n] ./ delta[1:n-1]
+    x1 = nx .* delta[1]
+    y1 = ny .* delta[1]
+    r1sq = x1 .^ 2 .+ y1 .^ 2
+
+    Q1 = exp.(im * k / 2 * (1 - m[1]) / Delta_z[1] .* r1sq)
+    Uin = Uin .* Q1
+    local Z = 0.0
+    for idx = 1:n-1
+        # spatial frequencies (of i^th plane)
+        deltaf = 1 / (N * delta[idx])
+        fX = nx .* deltaf
+        fY = ny .* deltaf
+        fsq = fX .^ 2 .+ fY .^ 2
+        Z = Delta_z[idx]   # propagation distance
+        # quadratic phase factor
+        Q2 = exp.(-im * π^2 * 2 * Z / m[idx] / k .* fsq)
+        # compute the propagated field
+        Uin = sg .* ift2(Q2 .* ft2(Uin ./ m[idx], delta[idx]), deltaf)
+    end
+
+    # observation-plane coordinates
+    xn = nx .* delta[n]
+    yn = ny .* delta[n]
+    rnsq = xn .^ 2 .+ yn .^ 2
+    Q3 = exp.(im * k / 2 * (m[n-1] - 1) / (m[n-1] * Z) .* rnsq)
+    Uout = Q3 .* Uin
+
+    return xn, yn, Uout
 end
 
 # --- Turbulence & Analysis ---
