@@ -9,14 +9,14 @@ delta = L / N   # sample spacing [m]
 x = (-N/2:N/2-1) * delta
 
 w = 2.0         # width of rectangle
-A = rect(x / w) # signal A
+A = rect.(x / w) # signal A
 B = A           # signal B
 
 # Perform discrete convolution
 C = myconv(A, B, delta)
 
 # Continuous convolution
-C_cont = w * tri(x / w)
+C_cont = w * tri.(x / w)
 
 # Plot (a): Signal A
 p1 = plot(x, A,

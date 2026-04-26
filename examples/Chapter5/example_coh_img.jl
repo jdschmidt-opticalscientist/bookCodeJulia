@@ -14,8 +14,7 @@ y = repeat(vec, 1, N)
 r = sqrt.(x .^ 2 .+ y .^ 2)
 theta = atan.(y, x)
 # Wavefront aberration
-z_idx = zeros(Int, 4, 2)
-z_idx[4, :] = [2, 0]
+z_idx = Dict(4 => [2, 0])
 W = 0.05 .* zernike(4, 2 .* r ./ D, theta, z_idx)
 # complex pupil function
 P = circ.(x, y, D) .* exp.(im * 2 * π .* W)
