@@ -23,15 +23,25 @@ jobs:
         with:
           version: "1"
 
-      - name: Install dependencies (Instantiate)
+      - name: Install dependencies (Resolve & Instantiate)
         run: |
-          julia --project=@. -e 'using Pkg; Pkg.instantiate()'
+          # 1. Activate the root project
+          # 2. Develop the current directory so scripts can see the local package
+          # 3. Resolve and Instantiate to lock in dependencies like JuMP and Ipopt
+          julia --project=@. -e '
+            using Pkg; 
+            Pkg.develop(PackageSpec(path=".")); 
+            Pkg.resolve(); 
+            Pkg.instantiate();
+            Pkg.precompile();
+          '
 
       - name: Run Master Simulation Smoke Test
         env:
-          GKSwstype: "100" # Headless plotting mode
+          GKSwstype: "100"
         run: |
           julia --project=@. -e '
+            using OpticalWavePropSim; # Ensure the package is loaded first
             include("examples/Chapter9/example_pt_source_atmos_setup.jl");
             include("examples/Chapter9/analysis_pt_source_atmos_samp.jl");
             include("examples/Chapter9/example_pt_source_vac_prop.jl");
