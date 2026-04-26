@@ -37,8 +37,7 @@ jobs:
         run: |
           julia --project=@. -e '
             # We use the source code directly to avoid "Package Not Found" issues
-            include("src/OpticalWavePropSim.jl"); 
-            using .OpticalWavePropSim;
+            using OpticalWavePropSim
             
             include("examples/Chapter9/example_pt_source_atmos_setup.jl");
             include("examples/Chapter9/analysis_pt_source_atmos_samp.jl");
