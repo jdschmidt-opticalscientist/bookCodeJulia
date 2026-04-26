@@ -10,9 +10,10 @@ using FFTW
 using Statistics: mean
 
 export ft, ift, ft2, ift2, myconv, myconv2, rect, tri, jinc, circ,
+    derivative_ft, gradient_ft, corr2_ft, str_fcn2_ft, zernike,
     fraunhofer_prop, ang_spec_multi_prop, ang_spec_prop, ang_spec_propABCD,
     one_step_prop, two_step_prop, ang_spec_multi_prop_vac,
-    ft_phase_screen, ft_sh_phase_screen, zernike, fresnel_prop_square_ap
+    ft_phase_screen, ft_sh_phase_screen, fresnel_prop_square_ap
 
 
 # --- Fourier Transform Utilities ---
@@ -364,52 +365,59 @@ end
 # --- Turbulence & Analysis ---
 
 function ft_phase_screen(r0, N, delta, L0, l0)
-    del_f = 1 / (N * delta)
-    vec = collect(-N/2:N/2-1) .* del_f
-    fx = vec' .* ones(N)
-    fy = ones(N, 1) .* vec
 
-    f = sqrt.(fx .^ 2 .+ fy .^ 2)
-    fm = 5.92 / (l0 * 2 * π)
-    f0 = 1 / L0
-
+    # setup the PSD
+    del_f = 1 / (N * delta)   # frequency grid spacing [1/m]
+    v_f = collect(-N/2:N/2-1) .* del_f
+    # frequency grid [1/m]
+    fx = repeat(v_f', N, 1)
+    fy = repeat(v_f, 1, N)
+    f = sqrt.(fx .^ 2 .+ fy .^ 2)  # polar grid
+    fm = 5.92 / (l0 * 2 * π) # inner scale frequency [1/m]
+    f0 = 1 / L0           # outer scale frequency [1/m]
+    # modified von Karman atmospheric phase PSD
     PSD_phi = 0.023 * r0^(-5 / 3) .* exp.(-(f ./ fm) .^ 2) ./ (f .^ 2 .+ f0^2) .^ (11 / 6)
     PSD_phi[Int(N / 2)+1, Int(N / 2)+1] = 0
-
+    # random draws of Fourier coefficients
     cn = (randn(N, N) .+ im .* randn(N, N)) .* sqrt.(PSD_phi) .* del_f
+    # synthesize the phase screen
     return real(ift2(cn, 1.0))
 end
 
 function ft_sh_phase_screen(r0, N, delta, L0, l0)
     D = N * delta
+    # high-frequency screen from FFT method
     phz_hi = ft_phase_screen(r0, N, delta, L0, l0)
-
-    vec = collect(-N/2:N/2-1) .* delta
-    x = vec' .* ones(N)
-    y = ones(N, 1) .* vec
+    # spatial grid [m]
+    v_space = collect(-N/2:N/2-1) .* delta
+    x = repeat(v_space', N, 1)
+    y = repeat(v_space, 1, N)
+    # initialize low-freq screen
     phz_lo = zeros(ComplexF64, N, N)
-
+    # loop over frequency grids with spacing 1/(3^p*L)
     for p in 1:3
+        # setup the PSD
         del_f = 1 / (3^p * D)
-        vec_f = collect(-1:1) .* del_f
-        fx = vec_f' .* ones(3)
-        fy = ones(3, 1) .* vec_f
-        f = sqrt.(fx .^ 2 .+ fy .^ 2)
-
-        fm = 5.92 / (l0 * 2 * π)
-        f0 = 1 / L0
+        v_f = collect(-1:1) .* del_f
+        # frequency grid [1/m]
+        fx = repeat(v_f', 3, 1)
+        fy = repeat(v_f, 1, 3)
+        f = sqrt.(fx .^ 2 .+ fy .^ 2)  # polar grid
+        fm = 5.92 / (l0 * 2 * π) # inner scale frequency [1/m]
+        f0 = 1 / L0           # outer scale frequency [1/m]
+        # modified von Karman atmospheric phase PSD
         PSD_phi = 0.023 * r0^(-5 / 3) .* exp.(-(f ./ fm) .^ 2) ./ (f .^ 2 .+ f0^2) .^ (11 / 6)
         PSD_phi[2, 2] = 0
-
+        # random draws of Fourier coefficients
         cn = (randn(3, 3) .+ im .* randn(3, 3)) .* sqrt.(PSD_phi) .* del_f
-
         SH = zeros(ComplexF64, N, N)
+        # loop over frequencies on this grid
         for ii in 1:9
+            # Indexing into 3x3 grids fx and fy is now safe
             SH .+= cn[ii] .* exp.(im * 2 * π .* (fx[ii] .* x .+ fy[ii] .* y))
         end
-        phz_lo .+= SH
+        phz_lo .+= SH   # accumulate subharmonics
     end
-
     phz_lo_real = real(phz_lo)
     phz_lo_real .-= mean(phz_lo_real)
     return phz_lo_real, phz_hi
