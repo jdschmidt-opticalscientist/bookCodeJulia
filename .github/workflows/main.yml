@@ -6,7 +6,6 @@ on:
   pull_request:
     branches: ["main"]
 
-# 1. This suppresses the deprecation warnings and opts into the Node 24 runtime early
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
@@ -23,24 +22,22 @@ jobs:
         with:
           version: "1"
 
-      - name: Install dependencies (Instantiate)
+      - name: Install dependencies
+        # Notice we tell GitHub to run this INSIDE the subfolder
+        working-directory: ./OpticalWavePropSim
         run: |
-          julia --project=@. -e '
-            using Pkg; 
-            Pkg.instantiate();
-            Pkg.precompile();
-          '
+          julia --project=@. -e 'using Pkg; Pkg.instantiate(); Pkg.precompile()'
 
       - name: Run Master Simulation Smoke Test
+        working-directory: ./OpticalWavePropSim
         env:
           GKSwstype: "100"
         run: |
           julia --project=@. -e '
-            # We use the source code directly to avoid "Package Not Found" issues
             using OpticalWavePropSim
-            
-            include("examples/Chapter9/example_pt_source_atmos_setup.jl");
-            include("examples/Chapter9/analysis_pt_source_atmos_samp.jl");
-            include("examples/Chapter9/example_pt_source_vac_prop.jl");
-            include("examples/Chapter9/example_pt_source_turb_prop.jl");
+            # We must adjust these paths to go back up and into examples
+            include("../examples/Chapter9/example_pt_source_atmos_setup.jl");
+            include("../examples/Chapter9/analysis_pt_source_atmos_samp.jl");
+            include("../examples/Chapter9/example_pt_source_vac_prop.jl");
+            include("../examples/Chapter9/example_pt_source_turb_prop.jl");
           '
