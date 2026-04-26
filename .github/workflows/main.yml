@@ -16,7 +16,6 @@ jobs:
 
     steps:
       - name: Check out repository code
-        # Ensure you're using v4 or v5 as they become available to support the new runtime
         uses: actions/checkout@v4
 
       - name: Set up Julia
@@ -31,5 +30,10 @@ jobs:
       - name: Run Master Simulation Smoke Test
         env:
           GKSwstype: "100" # Headless plotting mode
-          run: |
-          julia --project=@. -e 'include("examples/Chapter9/example_pt_source_atmos_setup.jl"); include("examples/Chapter9/analysis_pt_source_atmos_samp.jl");'
+        run: |
+          julia --project=@. -e '
+            include("examples/Chapter9/example_pt_source_atmos_setup.jl");
+            include("examples/Chapter9/analysis_pt_source_atmos_samp.jl");
+            include("examples/Chapter9/example_pt_source_vac_prop.jl");
+            include("examples/Chapter9/example_pt_source_turb_prop.jl");
+          '
