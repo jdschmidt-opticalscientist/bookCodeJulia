@@ -6,30 +6,30 @@ on:
   pull_request:
     branches: ["main"]
 
+# 1. This suppresses the deprecation warnings and opts into the Node 24 runtime early
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
     steps:
       - name: Check out repository code
+        # Ensure you're using v4 or v5 as they become available to support the new runtime
         uses: actions/checkout@v4
 
       - name: Set up Julia
         uses: julia-actions/setup-julia@v2
         with:
-          version: "1" # This automatically grabs the latest stable 1.x release
+          version: "1"
 
       - name: Install dependencies (Instantiate)
         run: |
-          # The equivalent of pip install -r requirements.txt
-          # This tells Julia to read Project.toml and download the exact packages
           julia --project=@. -e 'using Pkg; Pkg.instantiate()'
 
       - name: Run Master Simulation Smoke Test
         env:
-          # Force GR (Plots.jl default backend) to run in headless mode
-          # This is the exact equivalent of MPLBACKEND: Agg
-          GKSwstype: "100"
+          GKSwstype: "100" # Headless plotting mode
         run: |
-          # Run the ultimate test script, ensuring it uses the local environment
-          julia --project=@. examples/Chapter9/example_pt_source_atmos_setup.jl
+          julia --project=@. examples/Chapter9/examples/Chapter9/example_pt_source_atmos_setup.jl
