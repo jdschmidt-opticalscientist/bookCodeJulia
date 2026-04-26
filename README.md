@@ -38,6 +38,7 @@ bookCodeJulia/
 │   ├── src/            # Core propagation source code
 │   ├── Project.toml    # Dependencies
 │   └── Manifest.toml   # Locked environment state
+```
 
 ---
 
