@@ -1,0 +1,35 @@
+name: Julia CI (Build & Test)
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Set up Julia
+        uses: julia-actions/setup-julia@v2
+        with:
+          version: "1" # This automatically grabs the latest stable 1.x release
+
+      - name: Install dependencies (Instantiate)
+        run: |
+          # The equivalent of pip install -r requirements.txt
+          # This tells Julia to read Project.toml and download the exact packages
+          julia --project=@. -e 'using Pkg; Pkg.instantiate()'
+
+      - name: Run Master Simulation Smoke Test
+        env:
+          # Force GR (Plots.jl default backend) to run in headless mode
+          # This is the exact equivalent of MPLBACKEND: Agg
+          GKSwstype: "100"
+        run: |
+          # Run the ultimate test script, ensuring it uses the local environment
+          julia --project=@. examples/Chapter9/example_pt_source_atmos_setup.jl
