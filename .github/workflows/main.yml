@@ -31,5 +31,5 @@ jobs:
       - name: Run Master Simulation Smoke Test
         env:
           GKSwstype: "100" # Headless plotting mode
-        run: |
-          julia --project=@. examples/Chapter9/examples/Chapter9/example_pt_source_atmos_setup.jl
+          run: |
+          julia --project=@. -e 'include("examples/Chapter9/example_pt_source_atmos_setup.jl"); include("examples/Chapter9/analysis_pt_source_atmos_samp.jl");'
