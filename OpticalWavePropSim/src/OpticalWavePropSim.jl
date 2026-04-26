@@ -5,14 +5,15 @@
 
 module OpticalWavePropSim
 
+using SpecialFunctions
 using FFTW
-using SpecialFunctions # For besselj, fresnelc, fresnels, and gamma
-using Statistics       # For mean
+using Statistics: mean
 
 export ft, ift, ft2, ift2, myconv, myconv2, rect, tri, jinc, circ,
-    fraunhofer_prop, ang_spec_multi_prop, ang_spec_prop, corr2_ft, derivative_ft,
-    gradient_ft, str_fcn2_ft,
-    ft_phase_screen, ft_sh_phase_screen, zernike
+    fraunhofer_prop, ang_spec_multi_prop, ang_spec_prop, ang_spec_propABCD,
+    one_step_prop, two_step_prop,
+    ft_phase_screen, ft_sh_phase_screen, zernike, fresnel_prop_square_ap
+
 
 # --- Fourier Transform Utilities ---
 
@@ -111,6 +112,60 @@ function fraunhofer_prop(Uin, wvl, d1, Dz)
     return Uout, x2, y2
 end
 
+# Use the Faddeeva function from SpecialFunctions to define the Fresnel integrals
+function fresnel_integrals(z)
+    # The Faddeeva function w(z) relates to Fresnel integrals
+    # Fresnel integrals S(z) and C(z)
+    # Note: SpecialFunctions.faddeeva(z) is available
+    w = faddeeva((1 + im) * sqrt(π) * z / 2)
+    val = (1 + im) / 2 * (1 - exp(-im * π * z^2 / 2) * w)
+    return real(val), imag(val) # Returns (C, S)
+end
+
+# Inside OpticalWavePropSim.jl (below your imports)
+import SpecialFunctions: erf
+
+# Fresnel integrals defined via the complex Error Function
+function fresnelc(z)
+    val = (1 + im) / 2 * erf((1 - im) * sqrt(π) / 2 * z)
+    return real(val)
+end
+
+function fresnels(z)
+    val = (1 + im) / 2 * erf((1 - im) * sqrt(π) / 2 * z)
+    return imag(val)
+end
+
+function fresnel_prop_square_ap(x2, y2, D1, wvl, Dz)
+    # function U = fresnel_prop_square_ap(x2, y2, D1, wvl, Dz)
+    N_F = (D1 / 2)^2 / (wvl * Dz) # Fresnel number
+
+    # substitutions
+    bigX = x2 ./ sqrt(wvl * Dz)
+    bigY = y2 ./ sqrt(wvl * Dz)
+
+    alpha1 = -sqrt(2) .* (sqrt(N_F) .+ bigX)
+    alpha2 = sqrt(2) .* (sqrt(N_F) .- bigX)
+    beta1 = -sqrt(2) .* (sqrt(N_F) .+ bigY)
+    beta2 = sqrt(2) .* (sqrt(N_F) .- bigY)
+
+    # Fresnel sine and cosine integrals
+    ca1 = fresnelc.(alpha1)
+    sa1 = fresnels.(alpha1)
+    ca2 = fresnelc.(alpha2)
+    sa2 = fresnels.(alpha2)
+
+    cb1 = fresnelc.(beta1)
+    sb1 = fresnels.(beta1)
+    cb2 = fresnelc.(beta2)
+    sb2 = fresnels.(beta2)
+
+    # observation-plane field
+    U = 1 / (2 * im) .* ((ca2 .- ca1) .+ im .* (sa2 .- sa1)) .* ((cb2 .- cb1) .+ im .* (sb2 .- sb1))
+
+    return U
+end
+
 function ang_spec_multi_prop(Uin, wvl, delta1, deltan, z, t)
     N = size(Uin, 1)
     vec = collect(-N/2:N/2-1)
@@ -167,6 +222,91 @@ function ang_spec_prop(Uin, wvl, d1, d2, Dz)
 
     Uout = Q3 .* ift2(Q2 .* ft2(Q1 .* Uin ./ m, d1), df1)
     return nx .* d2, ny .* d2, Uout
+end
+
+function ang_spec_propABCD(Uin, wvl, d1, d2, ABCD)
+    # function [x2, y2, Uout] = ang_spec_propABCD(Uin, wvl, d1, d2, ABCD)
+
+    N = size(Uin, 1)   # assume square grid
+    # source-plane coordinates
+    vec1 = collect(-N/2:N/2-1) .* d1
+    x1 = repeat(vec1', N, 1)
+    y1 = repeat(vec1, 1, N)
+    r1sq = x1 .^ 2 .+ y1 .^ 2
+    # spatial frequencies (of source plane)
+    df1 = 1 / (N * d1)
+    vecf = collect(-N/2:N/2-1) .* df1
+    fX = repeat(vecf', N, 1)
+    fY = repeat(vecf, 1, N)
+    fsq = fX .^ 2 .+ fY .^ 2
+    # scaling parameter
+    m = d2 / d1
+    # observation-plane coordinates
+    vec2 = collect(-N/2:N/2-1) .* d2
+    x2 = repeat(vec2', N, 1)
+    y2 = repeat(vec2, 1, N)
+    r2sq = x2 .^ 2 .+ y2 .^ 2
+    # optical system matrix (1-based indexing)
+    A = ABCD[1, 1]
+    B = ABCD[1, 2]
+    D = ABCD[2, 2]
+    # quadratic phase factors
+    Q1 = exp.(im * π / (wvl * B) * (A - m) .* r1sq)
+    Q2 = exp.(-im * π * wvl * B / m .* fsq)
+    Q3 = exp.(im * π / (wvl * B) * (D - 1 / m) .* r2sq)
+    # compute the propagated field
+    Uout = Q3 .* ift2(Q2 .* ft2(Q1 .* Uin ./ m, d1), df1)
+    return x2, y2, Uout
+end
+
+function one_step_prop(Uin, wvl, d1, Dz)
+    # function [x2 y2 Uout] ...
+    #     = one_step_prop(Uin, wvl, d1, Dz)
+    N = size(Uin, 1)   # assume square grid
+    k = 2 * π / wvl    # optical wavevector
+    # source-plane coordinates
+    vec1 = collect(-N/2:1:N/2-1) .* d1
+    x1 = repeat(vec1', N, 1)
+    y1 = repeat(vec1, 1, N)
+    # observation-plane coordinates
+    vec2 = collect(-N/2:N/2-1) ./ (N * d1) .* wvl .* Dz
+    x2 = repeat(vec2', N, 1)
+    y2 = repeat(vec2, 1, N)
+    # evaluate the Fresnel-Kirchhoff integral
+    Uout = 1 / (im * wvl * Dz) .* exp.(im * k / (2 * Dz) .* (x2 .^ 2 .+ y2 .^ 2)) .* ft2(Uin .* exp.(im * k / (2 * Dz) .* (x1 .^ 2 .+ y1 .^ 2)), d1)
+
+    return x2, y2, Uout
+end
+
+function two_step_prop(Uin, wvl, d1, d2, Dz)
+    # function [x2 y2 Uout] ...
+    #     = two_step_prop(Uin, wvl, d1, d2, Dz)
+    N = size(Uin, 1)   # number of grid points
+    k = 2 * π / wvl    # optical wavevector
+    # source-plane coordinates
+    vec1 = collect(-N/2:1:N/2-1) .* d1
+    x1 = repeat(vec1', N, 1)
+    y1 = repeat(vec1, 1, N)
+    # magnification
+    m = d2 / d1
+    # intermediate plane
+    Dz1 = Dz / (1 - m)  # propagation distance
+    d1a = wvl * abs(Dz1) / (N * d1)    # coordinates
+    vec1a = collect(-N/2:N/2-1) .* d1a
+    x1a = repeat(vec1a', N, 1)
+    y1a = repeat(vec1a, 1, N)
+    # evaluate the Fresnel-Kirchhoff integral for the intermediate plane
+    Uitm = 1 / (im * wvl * Dz1) .* exp.(im * k / (2 * Dz1) .* (x1a .^ 2 .+ y1a .^ 2)) .* ft2(Uin .* exp.(im * k / (2 * Dz1) .* (x1 .^ 2 .+ y1 .^ 2)), d1)
+    # observation plane
+    Dz2 = Dz - Dz1  # propagation distance
+    # coordinates
+    vec2 = collect(-N/2:N/2-1) .* d2
+    x2 = repeat(vec2', N, 1)
+    y2 = repeat(vec2, 1, N)
+    # evaluate the Fresnel diffraction integral for the observation plane
+    Uout = 1 / (im * wvl * Dz2) .* exp.(im * k / (2 * Dz2) .* (x2 .^ 2 .+ y2 .^ 2)) .* ft2(Uitm .* exp.(im * k / (2 * Dz2) .* (x1a .^ 2 .+ y1a .^ 2)), d1a)
+
+    return x2, y2, Uout
 end
 
 # --- Turbulence & Analysis ---
