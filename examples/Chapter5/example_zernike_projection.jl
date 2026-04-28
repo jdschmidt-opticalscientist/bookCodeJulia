@@ -6,7 +6,7 @@ N = 32    # number of grid points per side
 L = 2.0      # total size of the grid [m]
 delta = L / N  # grid spacing [m]
 # cartesian & polar coordinates
-x_vec = ((-N/2):(N/2-1)) * delta
+x_vec = ((-N / 2):(N / 2 - 1)) * delta
 x = repeat(x_vec', N, 1)
 y = repeat(x_vec, 1, N)
 r = sqrt.(x .^ 2 .+ y .^ 2)

@@ -8,7 +8,7 @@ delta = L / N       # grid spacing [m]
 wvl = 1e-6          # optical wavelength [m]
 z = 0.25            # image distance [m]
 # pupil-plane coordinates
-vec = ((-N/2):(N/2-1)) * delta
+vec = ((-N / 2):(N / 2 - 1)) * delta
 x = repeat(vec', N, 1)
 y = repeat(vec, 1, N)
 r = sqrt.(x .^ 2 .+ y .^ 2)
@@ -23,7 +23,7 @@ h = ft2(P, delta)
 psf = abs2.(h)      # Incoherent Point Spread Function (Intensity)
 # image-plane coordinates
 U_grid = wvl * z / (N * delta)
-u_vec = ((-N/2):(N/2-1)) * U_grid
+u_vec = ((-N / 2):(N / 2 - 1)) * U_grid
 u = repeat(u_vec', N, 1)
 v = repeat(u_vec, 1, N)
 # object (same coordinates as h)
@@ -40,39 +40,39 @@ u_mm = u_vec * 1e3
 p1 = heatmap(
     u_mm,
     u_mm,
-    obj,
-    aspect_ratio = :equal,
-    c = :viridis,
-    title = "Object Irradiance",
-    xlabel = "x [mm]",
-    ylabel = "y [mm]",
+    obj;
+    aspect_ratio=:equal,
+    c=:viridis,
+    title="Object Irradiance",
+    xlabel="x [mm]",
+    ylabel="y [mm]",
 )
 
 # Plot 2: Point Spread Function (PSF)
 p2 = heatmap(
     u_mm,
     u_mm,
-    psf,
-    aspect_ratio = :equal,
-    c = :viridis,
-    title = "PSF",
-    xlabel = "u [mm]",
-    ylabel = "v [mm]",
+    psf;
+    aspect_ratio=:equal,
+    c=:viridis,
+    title="PSF",
+    xlabel="u [mm]",
+    ylabel="v [mm]",
 )
 
 # Plot 3: Incoherent Image Irradiance
 p3 = heatmap(
     u_mm,
     u_mm,
-    real.(img),
-    aspect_ratio = :equal,
-    c = :viridis,
-    title = "Image Irradiance",
-    xlabel = "u [mm]",
-    ylabel = "v [mm]",
+    real.(img);
+    aspect_ratio=:equal,
+    c=:viridis,
+    title="Image Irradiance",
+    xlabel="u [mm]",
+    ylabel="v [mm]",
 )
 
 # Final Layout
-p_final = plot(p1, p2, p3, layout = (1, 3), size = (1300, 450), margin = 5Plots.mm)
+p_final = plot(p1, p2, p3; layout=(1, 3), size=(1300, 450), margin=5Plots.mm)
 
 display(p_final)

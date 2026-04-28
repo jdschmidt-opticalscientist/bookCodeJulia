@@ -7,7 +7,7 @@ N = 40;     # number of grid points per side
 L = 2.0;      # total size of the grid [m]
 delta = L / N;  # grid spacing [m]
 # cartesian & polar coordinates
-x_vec = ((-N/2):(N/2-1)) * delta
+x_vec = ((-N / 2):(N / 2 - 1)) * delta
 x = repeat(x_vec', N, 1)
 y = repeat(x_vec, 1, N)
 r = sqrt.(x .^ 2 .+ y .^ 2)
@@ -25,7 +25,7 @@ W = screen[idxAp];   # perform linear indexing
 nModes = 100;   # number of Zernike modes
 # create matrix of Zernike polynomial values
 Z = zeros(length(W), nModes);
-for idx = 1:nModes
+for idx in 1:nModes
     temp = zernike(idx, r, theta)
     Z[:, idx] = temp[idxAp]
 end
@@ -47,13 +47,13 @@ c_max = maximum(W)
 p_orig = heatmap(
     x_vec,
     x_vec,
-    screen,
-    aspect_ratio = :equal,
-    c = :jet,
-    clims = (c_min, c_max),
-    title = "Original Screen",
-    xlabel = "m",
-    ylabel = "m",
+    screen;
+    aspect_ratio=:equal,
+    c=:jet,
+    clims=(c_min, c_max),
+    title="Original Screen",
+    xlabel="m",
+    ylabel="m",
 )
 
 # 2. Cumulative Reconstructions
@@ -70,14 +70,14 @@ for n in mode_list
     p = heatmap(
         x_vec,
         x_vec,
-        scr_n,
-        aspect_ratio = :equal,
-        c = :jet,
-        clims = (c_min, c_max),
-        title = "Modes 1 to $n",
-        xlabel = "x [m]",
-        ylabel = "y [m]",
-        colorbar = :none,
+        scr_n;
+        aspect_ratio=:equal,
+        c=:jet,
+        clims=(c_min, c_max),
+        title="Modes 1 to $n",
+        xlabel="x [m]",
+        ylabel="y [m]",
+        colorbar=:none,
     )
     push!(p_recons, p)
 end
@@ -88,5 +88,5 @@ l = @layout [
     grid(2, 2)
 ]
 
-final_plot = plot(p_orig, p_recons..., layout = l, size = (800, 1000), margin = 5Plots.mm)
+final_plot = plot(p_orig, p_recons...; layout=l, size=(800, 1000), margin=5Plots.mm)
 display(final_plot)

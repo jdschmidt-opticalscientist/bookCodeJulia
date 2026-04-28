@@ -4,8 +4,8 @@ using Plots, Printf
 c = 2;
 D1p = D1 + c * wvl * Dz / r0sw;
 D2p = D2 + c * wvl * Dz / r0sw;
-delta1_vec = range(1e-6, 1.1 * wvl * Dz / D2p, length = 100);
-deltan_vec = range(1e-6, 1.1 * wvl * Dz / D1p, length = 100);
+delta1_vec = range(1e-6, 1.1 * wvl * Dz / D2p; length=100);
+deltan_vec = range(1e-6, 1.1 * wvl * Dz / D1p; length=100);
 
 # constraint 1
 deltan_max = -D2p / D1p .* delta1_vec .+ wvl * Dz / D1p;
@@ -37,17 +37,17 @@ levels_to_track = 1:14
 p = contourf(
     delta1_vec .* 1e3,
     deltan_vec .* 1e3,
-    log2.(N2),
-    levels = levels_to_track,
-    color = :jet,
-    clims = (minimum(levels_to_track), maximum(levels_to_track)),
-    title = "Constraints 1, 2, & 3",
-    xlabel = "delta_1 [mm]",
-    ylabel = "delta_n [mm]",
-    colorbar_title = "Required log2(N)",
+    log2.(N2);
+    levels=levels_to_track,
+    color=:jet,
+    clims=(minimum(levels_to_track), maximum(levels_to_track)),
+    title="Constraints 1, 2, & 3",
+    xlabel="delta_1 [mm]",
+    ylabel="delta_n [mm]",
+    colorbar_title="Required log2(N)",
     # --- Colorbar Customization to replace inline labels ---
-    right_margin = 10Plots.mm, # Make space for the labels
-    colorbar_ticks = (levels_to_track, ["$l" for l in levels_to_track]), # Force labels on k=1, 2, ... 14
+    right_margin=10Plots.mm, # Make space for the labels
+    colorbar_ticks=(levels_to_track, ["$l" for l in levels_to_track]), # Force labels on k=1, 2, ... 14
 )
 
 # Add black lines on the contour levels for clarity
@@ -55,52 +55,45 @@ contour!(
     p,
     delta1_vec .* 1e3,
     deltan_vec .* 1e3,
-    log2.(N2),
-    levels = levels_to_track,
-    color = :black,
-    lw = 0.5,
+    log2.(N2);
+    levels=levels_to_track,
+    color=:black,
+    lw=0.5,
 )
 
 # Overlay Constraint 1
 plot!(
     p,
     delta1_vec .* 1e3,
-    deltan_max .* 1e3,
-    label = "Constraint 1",
-    color = :black,
-    lw = 2,
-    linestyle = :dash,
+    deltan_max .* 1e3;
+    label="Constraint 1",
+    color=:black,
+    lw=2,
+    linestyle=:dash,
 )
 
 # Overlay Constraint 3
 plot!(
     p,
     delta1_vec .* 1e3,
-    d2min3 .* 1e3,
-    label = "Constraint 3 Min",
-    color = :green,
-    lw = 2,
-    linestyle = :dashdot,
+    d2min3 .* 1e3;
+    label="Constraint 3 Min",
+    color=:green,
+    lw=2,
+    linestyle=:dashdot,
 )
 plot!(
     p,
     delta1_vec .* 1e3,
-    d2max3 .* 1e3,
-    label = "Constraint 3 Max",
-    color = :blue,
-    lw = 2,
-    linestyle = :dashdot,
+    d2max3 .* 1e3;
+    label="Constraint 3 Max",
+    color=:blue,
+    lw=2,
+    linestyle=:dashdot,
 )
 
 scatter!(
-    p,
-    [d1 * 1e3],
-    [d2 * 1e3],
-    marker = :x,
-    ms = 8,
-    mc = :white,
-    msw = 3,
-    label = "Chosen (d1, dn)",
+    p, [d1 * 1e3], [d2 * 1e3]; marker=:x, ms=8, mc=:white, msw=3, label="Chosen (d1, dn)"
 )
 
 # Set axis limits

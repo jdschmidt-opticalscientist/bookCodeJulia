@@ -12,7 +12,7 @@ delta1 = 1 / (10 * arg); # source-plane grid spacing [m]
 delta2 = D / 100; # observation-plane grid spacing [m]
 N = 1024;        # number of grid points
 # source-plane coordinates
-vec1 = collect((-N/2):(N/2-1)) .* delta1
+vec1 = collect((-N / 2):(N / 2 - 1)) .* delta1
 x1 = ones(N) .* vec1'
 y1 = vec1 .* ones(1, N)
 r1 = sqrt.(x1 .^ 2 .+ y1 .^ 2)
@@ -35,26 +35,26 @@ I_out = abs2.(Uout)
 p1 = heatmap(
     x2[1, :] .* 1e3,
     y2[:, 1] .* 1e3,
-    I_out / 1e12,
-    aspect_ratio = :equal,
-    c = :grays,
-    title = "Numerically Propagated\nPoint-Source Irradiance",
-    xlabel = "x₂ [mm]",
-    ylabel = "y₂ [mm]",
-    cb_formatter = x -> @sprintf("%.1e", x),
-    colorbar_title = "Irradiance / 1e12",
+    I_out / 1e12;
+    aspect_ratio=:equal,
+    c=:grays,
+    title="Numerically Propagated\nPoint-Source Irradiance",
+    xlabel="x₂ [mm]",
+    ylabel="y₂ [mm]",
+    cb_formatter=x -> @sprintf("%.1e", x),
+    colorbar_title="Irradiance / 1e12",
 )
 
 # y=0 Slice of Irradiance
 I_slice = I_out[mid, :]
 p2 = plot(
     x_slice_mm,
-    I_slice / 1e12,
-    title = "Numerically Propagated\nPoint-Source Irradiance Slice",
-    xlabel = "x₂ [mm]",
-    ylabel = "Irradiance / 1e12",
-    grid = true,
-    legend = false,
+    I_slice / 1e12;
+    title="Numerically Propagated\nPoint-Source Irradiance Slice",
+    xlabel="x₂ [mm]",
+    ylabel="Irradiance / 1e12",
+    grid=true,
+    legend=false,
 )
 
 # 3. y=0 Slice of Unwrapped Phase
@@ -63,7 +63,7 @@ wrapped_phase = angle.(Uout[mid, :])
 function simple_unwrap!(p)
     idxs = eachindex(p)
     for i in idxs[nextind(idxs, first(idxs)):end]
-        d = p[i] - p[i-1]
+        d = p[i] - p[i - 1]
         p[i] -= 2π * round(d / 2π)
     end
     return p
@@ -75,26 +75,19 @@ expected_phase = (k / (2 * Dz) .* x_slice .^ 2)
 
 p3 = plot(
     x_slice_mm,
-    expected_phase,
-    line = (:solid, 2, 0.8),
-    color = :red,
-    label = "Analytic",
-    title = "Numerically Propagated\nPoint-Source Phase",
-    xlabel = "x₂ [mm]",
-    ylabel = "Phase [rad]",
-    grid = true,
+    expected_phase;
+    line=(:solid, 2, 0.8),
+    color=:red,
+    label="Analytic",
+    title="Numerically Propagated\nPoint-Source Phase",
+    xlabel="x₂ [mm]",
+    ylabel="Phase [rad]",
+    grid=true,
 )
 
-plot!(
-    p3,
-    x_slice_mm,
-    unwrapped_shifted,
-    line = (:dashdot),
-    color = :blue,
-    label = "Numerical",
-)
+plot!(p3, x_slice_mm, unwrapped_shifted; line=(:dashdot), color=:blue, label="Numerical")
 
 # Combine plots into a 1x3 layout
-final_plot = plot(p1, p2, p3, layout = (1, 3), size = (1200, 400), margin = 5Plots.mm)
+final_plot = plot(p1, p2, p3; layout=(1, 3), size=(1200, 400), margin=5Plots.mm)
 
 display(final_plot)
