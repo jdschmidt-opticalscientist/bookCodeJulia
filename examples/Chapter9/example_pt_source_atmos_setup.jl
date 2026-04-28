@@ -17,15 +17,18 @@ Cn2 = 1e-16;    # structure parameter [m^-2/3], constant
 # SW and PW coherence diameters [m]
 r0sw = (0.423 * k^2 * Cn2 * 3 / 8 * Dz)^(-3 / 5);
 r0pw = (0.423 * k^2 * Cn2 * Dz)^(-3 / 5);
-p_vec = range(0, Dz, length=1000);
+p_vec = range(0, Dz, length = 1000);
 dp = step(p_vec);
 # log-amplitude variance
-rytov = 0.563 * k^(7 / 6) * sum(Cn2 .* max.(0, 1 .- p_vec ./ Dz) .^ (5 / 6) .* p_vec .^ (5 / 6) .* dp);
+rytov =
+    0.563 *
+    k^(7 / 6) *
+    sum(Cn2 .* max.(0, 1 .- p_vec ./ Dz) .^ (5 / 6) .* p_vec .^ (5 / 6) .* dp);
 
 # screen properties
 nscr = 11; # number of screens
 A = zeros(2, nscr); # matrix
-alpha = range(0, 1, length=nscr);
+alpha = range(0, 1, length = nscr);
 A[1, :] = collect(alpha) .^ (5 / 3);
 A[2, :] = max.(0, 1 .- alpha) .^ (5 / 6) .* collect(alpha) .^ (5 / 6);
 b = [r0sw^(-5 / 3), rytov / 1.33 * (k / Dz)^(5 / 6)];
@@ -35,7 +38,7 @@ set_silent(model) # Keep the output clean
 @variable(model, X[1:nscr] >= 0) # X >= 0 constraint
 # Set upper bounds
 rmax = 0.1; # maximum Rytov number per partial prop
-for i in 1:nscr
+for i = 1:nscr
     if A[2, i] == 0
         set_upper_bound(X[i], 50.0^(-5 / 3))
     else
@@ -43,7 +46,7 @@ for i in 1:nscr
     end
 end
 # Objective: Minimize sum of squared residuals
-@objective(model, Min, sum((sum(A[j, i] * X[i] for i in 1:nscr) - b[j])^2 for j in 1:2))
+@objective(model, Min, sum((sum(A[j, i] * X[i] for i = 1:nscr) - b[j])^2 for j = 1:2))
 optimize!(model)
 X_opt = value.(X); # Extract optimized values
 # check screen r0s
@@ -64,7 +67,7 @@ error_r0 = abs(r0sw - sim_r0) / r0sw;
 println("Individual Phase Screen Strengths:")
 @printf("%-10s | %10s\n", "Screen #", "r0 [m]")
 println("-"^23)
-for i in 1:nscr
+for i = 1:nscr
     # Print as 0-indexed to match textbook notation, using %g for formatting
     @printf("Screen %-3d | %10.4g\n", i - 1, r0scrn[i])
 end

@@ -56,33 +56,59 @@ MCDOC2 = abs.(MCF2) ./ abs(MCF2[mid, mid]);
 
 # Theoretical coherence for Spherical Wave (SW)
 # Equation: $$ \text{MCDOC}_{th} = \exp\left[-3.44 \left(\frac{\rho}{r_0}\right)^{5/3}\right] $$
-rho = abs.(xn[mid, mid:end-1]);
+rho = abs.(xn[mid, mid:(end-1)]);
 MCDOC_th = exp.(-3.44 * (rho ./ r0sw) .^ (5 / 3));
 
 # Plotting the results
-p_mcf = plot(rho ./ r0sw, MCDOC2[mid, mid:end-1],
-    label="Simulation (Julia)", color=:orange, lw=2,
-    title="Coherence (MCDOC) with Atmosphere",
-    xlabel="Separation / r0", ylabel="Spatial Coherence Factor",
-    xlims=(0, 4), ylims=(0, 1.1), grid=true)
+p_mcf = plot(
+    rho ./ r0sw,
+    MCDOC2[mid, mid:(end-1)],
+    label = "Simulation (Julia)",
+    color = :orange,
+    lw = 2,
+    title = "Coherence (MCDOC) with Atmosphere",
+    xlabel = "Separation / r0",
+    ylabel = "Spatial Coherence Factor",
+    xlims = (0, 4),
+    ylims = (0, 1.1),
+    grid = true,
+)
 
-plot!(p_mcf, rho ./ r0sw, MCDOC_th,
-    label="Theory (SW)", color=:black, linestyle=:dashdot, lw=1.5)
+plot!(
+    p_mcf,
+    rho ./ r0sw,
+    MCDOC_th,
+    label = "Theory (SW)",
+    color = :black,
+    linestyle = :dashdot,
+    lw = 1.5,
+)
 
 display(p_mcf)
 
 # Show last realization irradiance
-p_irr = heatmap(xn[1, :] .* 1e3, yn[:, 1] .* 1e3, abs2.(Uout),
-    aspect_ratio=:equal, color=:inferno,
-    title="Last Realization Irradiance", xlabel="x [mm]", ylabel="y [mm]")
+p_irr = heatmap(
+    xn[1, :] .* 1e3,
+    yn[:, 1] .* 1e3,
+    abs2.(Uout),
+    aspect_ratio = :equal,
+    color = :inferno,
+    title = "Last Realization Irradiance",
+    xlabel = "x [mm]",
+    ylabel = "y [mm]",
+)
 display(p_irr)
 
-p_phase = heatmap(xn[1, :] .* 1e3, yn[:, 1] .* 1e3, angle.(Uout),
-    aspect_ratio=:equal,
-    color=:phase, # A cyclic colormap is best for wrapped phase
-    title="Turbulent Phase (Last Realization)",
-    xlabel="x [mm]",
-    ylabel="y [mm]",
-    colorbar_title="Phase [rad]")
+p_phase = heatmap(
+    xn[1, :] .* 1e3,
+    yn[:, 1] .* 1e3,
+    angle.(Uout),
+    aspect_ratio = :equal,
+    color = :phase, # A cyclic colormap is best for wrapped phase
+    title = "Turbulent Phase (Last Realization)",
+    xlabel = "x [mm]",
+    ylabel = "y [mm]",
+    colorbar_title = "Phase [rad]",
+)
 
 display(p_phase)

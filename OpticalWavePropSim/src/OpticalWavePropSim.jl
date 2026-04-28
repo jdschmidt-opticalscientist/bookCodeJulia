@@ -9,11 +9,31 @@ using SpecialFunctions
 using FFTW
 using Statistics: mean
 
-export ft, ift, ft2, ift2, myconv, myconv2, rect, tri, jinc, circ,
-    derivative_ft, gradient_ft, corr2_ft, str_fcn2_ft, zernike,
-    fraunhofer_prop, ang_spec_multi_prop, ang_spec_prop, ang_spec_propABCD,
-    one_step_prop, two_step_prop, ang_spec_multi_prop_vac,
-    ft_phase_screen, ft_sh_phase_screen, fresnel_prop_square_ap
+export ft,
+    ift,
+    ft2,
+    ift2,
+    myconv,
+    myconv2,
+    rect,
+    tri,
+    jinc,
+    circ,
+    derivative_ft,
+    gradient_ft,
+    corr2_ft,
+    str_fcn2_ft,
+    zernike,
+    fraunhofer_prop,
+    ang_spec_multi_prop,
+    ang_spec_prop,
+    ang_spec_propABCD,
+    one_step_prop,
+    two_step_prop,
+    ang_spec_multi_prop_vac,
+    ft_phase_screen,
+    ft_sh_phase_screen,
+    fresnel_prop_square_ap
 
 
 # --- Fourier Transform Utilities ---
@@ -51,7 +71,7 @@ function myconv2(A, B, delta)
 end
 # --- Basic Optical Functions ---
 
-function rect(x, D=1.0)
+function rect(x, D = 1.0)
     # logic for a single scalar value
     x_abs = abs(x)
     if x_abs < D / 2
@@ -83,7 +103,7 @@ function jinc(x)
     end
 end
 
-function circ(x, y, D=1.0)
+function circ(x, y, D = 1.0)
     r = sqrt.(x .^ 2 .+ y .^ 2)
     return float.(r .<= D / 2)
 end
@@ -96,7 +116,7 @@ function fraunhofer_prop(Uin, wvl, d1, Dz)
     k = 2 * π / wvl     # optical wavevector
 
     # Frequency-domain grid spacing
-    f_vec = (-N/2:N/2-1) / (N * d1)
+    f_vec = ((-N/2):(N/2-1)) / (N * d1)
 
     # Observation-plane coordinates: x2 = wvl * Dz * fx
     v = wvl * Dz * f_vec
@@ -106,9 +126,8 @@ function fraunhofer_prop(Uin, wvl, d1, Dz)
     # Fraunhofer propagation formula:
     # Uout(x2,y2) = exp(i*k/(2*z)*(x2^2+y2^2)) / (i*wvl*z) * FT{Uin}
     # Note: ft2 handles the delta^2 scaling internally
-    Uout = (exp.(im * k / (2 * Dz) .* (x2 .^ 2 .+ y2 .^ 2))
-            /
-            (im * wvl * Dz) .* ft2(Uin, d1))
+    Uout =
+        (exp.(im * k / (2 * Dz) .* (x2 .^ 2 .+ y2 .^ 2)) / (im * wvl * Dz) .* ft2(Uin, d1))
 
     return Uout, x2, y2
 end
@@ -162,14 +181,16 @@ function fresnel_prop_square_ap(x2, y2, D1, wvl, Dz)
     sb2 = fresnels.(beta2)
 
     # observation-plane field
-    U = 1 / (2 * im) .* ((ca2 .- ca1) .+ im .* (sa2 .- sa1)) .* ((cb2 .- cb1) .+ im .* (sb2 .- sb1))
+    U =
+        1 / (2 * im) .* ((ca2 .- ca1) .+ im .* (sa2 .- sa1)) .*
+        ((cb2 .- cb1) .+ im .* (sb2 .- sb1))
 
     return U
 end
 
 function ang_spec_multi_prop(Uin, wvl, delta1, deltan, z, t)
     N = size(Uin, 1)
-    vec = collect(-N/2:N/2-1)
+    vec = collect((-N/2):(N/2-1))
     nx = vec' .* ones(N)
     ny = ones(N, 1) .* vec
     k = 2 * π / wvl
@@ -183,7 +204,7 @@ function ang_spec_multi_prop(Uin, wvl, delta1, deltan, z, t)
 
     alpha = z_arr ./ z_arr[end]
     delta = (1 .- alpha) .* delta1 .+ alpha .* deltan
-    m = delta[2:end] ./ delta[1:end-1]
+    m = delta[2:end] ./ delta[1:(end-1)]
 
     r1sq = (nx .* delta[1]) .^ 2 .+ (ny .* delta[1]) .^ 2
     Q1 = exp.(im * k / 2 * (1 - m[1]) / Delta_z[1] .* r1sq)
@@ -191,14 +212,15 @@ function ang_spec_multi_prop(Uin, wvl, delta1, deltan, z, t)
 
     curr_U = Uin
     local dz = 0.0
-    for idx in 1:(n-1)
+    for idx = 1:(n-1)
         deltaf = 1 / (N * delta[idx])
         fsq = (nx .* deltaf) .^ 2 .+ (ny .* deltaf) .^ 2
         dz = Delta_z[idx]
 
         Q2 = exp.(-im * π^2 * 2 * dz / m[idx] / k .* fsq)
         # Proper propagation step
-        curr_U = sg .* t[:, :, idx+1] .* ift2(Q2 .* ft2(curr_U ./ m[idx], delta[idx]), deltaf)
+        curr_U =
+            sg .* t[:, :, idx+1] .* ift2(Q2 .* ft2(curr_U ./ m[idx], delta[idx]), deltaf)
     end
 
     xn, yn = nx .* delta[end], ny .* delta[end]
@@ -210,7 +232,7 @@ end
 function ang_spec_prop(Uin, wvl, d1, d2, Dz)
     N = size(Uin, 1)
     k = 2 * π / wvl
-    vec = collect(-N/2:N/2-1)
+    vec = collect((-N/2):(N/2-1))
     nx = vec' .* ones(N)
     ny = ones(N, 1) .* vec
 
@@ -230,20 +252,20 @@ function ang_spec_propABCD(Uin, wvl, d1, d2, ABCD)
 
     N = size(Uin, 1)   # assume square grid
     # source-plane coordinates
-    vec1 = collect(-N/2:N/2-1) .* d1
+    vec1 = collect((-N/2):(N/2-1)) .* d1
     x1 = repeat(vec1', N, 1)
     y1 = repeat(vec1, 1, N)
     r1sq = x1 .^ 2 .+ y1 .^ 2
     # spatial frequencies (of source plane)
     df1 = 1 / (N * d1)
-    vecf = collect(-N/2:N/2-1) .* df1
+    vecf = collect((-N/2):(N/2-1)) .* df1
     fX = repeat(vecf', N, 1)
     fY = repeat(vecf, 1, N)
     fsq = fX .^ 2 .+ fY .^ 2
     # scaling parameter
     m = d2 / d1
     # observation-plane coordinates
-    vec2 = collect(-N/2:N/2-1) .* d2
+    vec2 = collect((-N/2):(N/2-1)) .* d2
     x2 = repeat(vec2', N, 1)
     y2 = repeat(vec2, 1, N)
     r2sq = x2 .^ 2 .+ y2 .^ 2
@@ -266,15 +288,17 @@ function one_step_prop(Uin, wvl, d1, Dz)
     N = size(Uin, 1)   # assume square grid
     k = 2 * π / wvl    # optical wavevector
     # source-plane coordinates
-    vec1 = collect(-N/2:1:N/2-1) .* d1
+    vec1 = collect((-N/2):1:(N/2-1)) .* d1
     x1 = repeat(vec1', N, 1)
     y1 = repeat(vec1, 1, N)
     # observation-plane coordinates
-    vec2 = collect(-N/2:N/2-1) ./ (N * d1) .* wvl .* Dz
+    vec2 = collect((-N/2):(N/2-1)) ./ (N * d1) .* wvl .* Dz
     x2 = repeat(vec2', N, 1)
     y2 = repeat(vec2, 1, N)
     # evaluate the Fresnel-Kirchhoff integral
-    Uout = 1 / (im * wvl * Dz) .* exp.(im * k / (2 * Dz) .* (x2 .^ 2 .+ y2 .^ 2)) .* ft2(Uin .* exp.(im * k / (2 * Dz) .* (x1 .^ 2 .+ y1 .^ 2)), d1)
+    Uout =
+        1 / (im * wvl * Dz) .* exp.(im * k / (2 * Dz) .* (x2 .^ 2 .+ y2 .^ 2)) .*
+        ft2(Uin .* exp.(im * k / (2 * Dz) .* (x1 .^ 2 .+ y1 .^ 2)), d1)
 
     return x2, y2, Uout
 end
@@ -285,7 +309,7 @@ function two_step_prop(Uin, wvl, d1, d2, Dz)
     N = size(Uin, 1)   # number of grid points
     k = 2 * π / wvl    # optical wavevector
     # source-plane coordinates
-    vec1 = collect(-N/2:1:N/2-1) .* d1
+    vec1 = collect((-N/2):1:(N/2-1)) .* d1
     x1 = repeat(vec1', N, 1)
     y1 = repeat(vec1, 1, N)
     # magnification
@@ -293,19 +317,23 @@ function two_step_prop(Uin, wvl, d1, d2, Dz)
     # intermediate plane
     Dz1 = Dz / (1 - m)  # propagation distance
     d1a = wvl * abs(Dz1) / (N * d1)    # coordinates
-    vec1a = collect(-N/2:N/2-1) .* d1a
+    vec1a = collect((-N/2):(N/2-1)) .* d1a
     x1a = repeat(vec1a', N, 1)
     y1a = repeat(vec1a, 1, N)
     # evaluate the Fresnel-Kirchhoff integral for the intermediate plane
-    Uitm = 1 / (im * wvl * Dz1) .* exp.(im * k / (2 * Dz1) .* (x1a .^ 2 .+ y1a .^ 2)) .* ft2(Uin .* exp.(im * k / (2 * Dz1) .* (x1 .^ 2 .+ y1 .^ 2)), d1)
+    Uitm =
+        1 / (im * wvl * Dz1) .* exp.(im * k / (2 * Dz1) .* (x1a .^ 2 .+ y1a .^ 2)) .*
+        ft2(Uin .* exp.(im * k / (2 * Dz1) .* (x1 .^ 2 .+ y1 .^ 2)), d1)
     # observation plane
     Dz2 = Dz - Dz1  # propagation distance
     # coordinates
-    vec2 = collect(-N/2:N/2-1) .* d2
+    vec2 = collect((-N/2):(N/2-1)) .* d2
     x2 = repeat(vec2', N, 1)
     y2 = repeat(vec2, 1, N)
     # evaluate the Fresnel diffraction integral for the observation plane
-    Uout = 1 / (im * wvl * Dz2) .* exp.(im * k / (2 * Dz2) .* (x2 .^ 2 .+ y2 .^ 2)) .* ft2(Uitm .* exp.(im * k / (2 * Dz2) .* (x1a .^ 2 .+ y1a .^ 2)), d1a)
+    Uout =
+        1 / (im * wvl * Dz2) .* exp.(im * k / (2 * Dz2) .* (x2 .^ 2 .+ y2 .^ 2)) .*
+        ft2(Uitm .* exp.(im * k / (2 * Dz2) .* (x1a .^ 2 .+ y1a .^ 2)), d1a)
 
     return x2, y2, Uout
 end
@@ -314,7 +342,7 @@ function ang_spec_multi_prop_vac(Uin, wvl, delta1, deltan, z)
     # function [xn yn Uout] = ang_spec_multi_prop_vac ...
     #     (Uin, wvl, delta1, deltan, z)
     N = size(Uin, 1)   # number of grid points
-    v = collect(-N/2:1:N/2-1)
+    v = collect((-N/2):1:(N/2-1))
     nx = repeat(v', N, 1)
     ny = repeat(v, 1, N)
     k = 2 * π / wvl    # optical wavevector
@@ -331,7 +359,7 @@ function ang_spec_multi_prop_vac(Uin, wvl, delta1, deltan, z)
     # grid spacings
     alpha = z_planes ./ z_planes[n]
     delta = (1 .- alpha) .* delta1 .+ alpha .* deltan
-    m = delta[2:n] ./ delta[1:n-1]
+    m = delta[2:n] ./ delta[1:(n-1)]
     x1 = nx .* delta[1]
     y1 = ny .* delta[1]
     r1sq = x1 .^ 2 .+ y1 .^ 2
@@ -339,7 +367,7 @@ function ang_spec_multi_prop_vac(Uin, wvl, delta1, deltan, z)
     Q1 = exp.(im * k / 2 * (1 - m[1]) / Delta_z[1] .* r1sq)
     Uin = Uin .* Q1
     local Z = 0.0
-    for idx = 1:n-1
+    for idx = 1:(n-1)
         # spatial frequencies (of i^th plane)
         deltaf = 1 / (N * delta[idx])
         fX = nx .* deltaf
@@ -368,7 +396,7 @@ function ft_phase_screen(r0, N, delta, L0, l0)
 
     # setup the PSD
     del_f = 1 / (N * delta)   # frequency grid spacing [1/m]
-    v_f = collect(-N/2:N/2-1) .* del_f
+    v_f = collect((-N/2):(N/2-1)) .* del_f
     # frequency grid [1/m]
     fx = repeat(v_f', N, 1)
     fy = repeat(v_f, 1, N)
@@ -377,7 +405,7 @@ function ft_phase_screen(r0, N, delta, L0, l0)
     f0 = 1 / L0           # outer scale frequency [1/m]
     # modified von Karman atmospheric phase PSD
     PSD_phi = 0.023 * r0^(-5 / 3) .* exp.(-(f ./ fm) .^ 2) ./ (f .^ 2 .+ f0^2) .^ (11 / 6)
-    PSD_phi[Int(N / 2)+1, Int(N / 2)+1] = 0
+    PSD_phi[Int(N/2)+1, Int(N/2)+1] = 0
     # random draws of Fourier coefficients
     cn = (randn(N, N) .+ im .* randn(N, N)) .* sqrt.(PSD_phi) .* del_f
     # synthesize the phase screen
@@ -389,13 +417,13 @@ function ft_sh_phase_screen(r0, N, delta, L0, l0)
     # high-frequency screen from FFT method
     phz_hi = ft_phase_screen(r0, N, delta, L0, l0)
     # spatial grid [m]
-    v_space = collect(-N/2:N/2-1) .* delta
+    v_space = collect((-N/2):(N/2-1)) .* delta
     x = repeat(v_space', N, 1)
     y = repeat(v_space, 1, N)
     # initialize low-freq screen
     phz_lo = zeros(ComplexF64, N, N)
     # loop over frequency grids with spacing 1/(3^p*L)
-    for p in 1:3
+    for p = 1:3
         # setup the PSD
         del_f = 1 / (3^p * D)
         v_f = collect(-1:1) .* del_f
@@ -406,13 +434,14 @@ function ft_sh_phase_screen(r0, N, delta, L0, l0)
         fm = 5.92 / (l0 * 2 * π) # inner scale frequency [1/m]
         f0 = 1 / L0           # outer scale frequency [1/m]
         # modified von Karman atmospheric phase PSD
-        PSD_phi = 0.023 * r0^(-5 / 3) .* exp.(-(f ./ fm) .^ 2) ./ (f .^ 2 .+ f0^2) .^ (11 / 6)
+        PSD_phi =
+            0.023 * r0^(-5 / 3) .* exp.(-(f ./ fm) .^ 2) ./ (f .^ 2 .+ f0^2) .^ (11 / 6)
         PSD_phi[2, 2] = 0
         # random draws of Fourier coefficients
         cn = (randn(3, 3) .+ im .* randn(3, 3)) .* sqrt.(PSD_phi) .* del_f
         SH = zeros(ComplexF64, N, N)
         # loop over frequencies on this grid
-        for ii in 1:9
+        for ii = 1:9
             # Indexing into 3x3 grids fx and fy is now safe
             SH .+= cn[ii] .* exp.(im * 2 * π .* (fx[ii] .* x .+ fy[ii] .* y))
         end
@@ -458,7 +487,7 @@ function derivative_ft(g, delta, n)
     # frequency domain grid spacing [1/m]
     F = 1 / (N * delta)
     # frequency values range
-    f_X = (-N/2:N/2-1) * F
+    f_X = ((-N/2):(N/2-1)) * F
 
     # Fourier derivative property: F{g^(n)} = (i*2*pi*f)^n * F{g}
     # Note the use of .^ and .* for element-wise operations
@@ -474,7 +503,7 @@ function gradient_ft(g, delta)
     F = 1 / (N * delta)
 
     # Create frequency vectors and 2D grids
-    f_vec = (-N/2:N/2-1) * F
+    f_vec = ((-N/2):(N/2-1)) * F
     fX = repeat(f_vec', N, 1)
     fY = repeat(f_vec, 1, N)
 
@@ -533,7 +562,7 @@ function _zrf(n, m, r)
         return R
     end
 
-    for s in 0:Int((n - m) / 2)
+    for s = 0:Int((n-m)/2)
         num = (-1)^s * gamma(n - s + 1)
         denom = (gamma(s + 1) * gamma((n + m) / 2 - s + 1) * gamma((n - m) / 2 - s + 1))
         # Use .^ for element-wise power on the radius matrix
@@ -559,7 +588,7 @@ function noll_to_nm(j)
     return n, m
 end
 
-function zernike(j, r, theta, z_map=nothing)
+function zernike(j, r, theta, z_map = nothing)
     # Use mapping if provided, otherwise default to Noll
     if !isnothing(z_map) && haskey(z_map, j)
         n, m_val = z_map[j]
