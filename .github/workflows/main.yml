@@ -25,10 +25,9 @@ jobs:
         working-directory: ./OpticalWavePropSim
         run: |
           julia --project=@. -e '
-          using OptialWavePropSim, JET;
-          report_package(OpticalWavePropSim)
+            using OpticalWavePropSim, JET
+            report_package(OpticalWavePropSim)
           '
-
   lint:
     name: Formatting Suggestions
     runs-on: ubuntu-latest
