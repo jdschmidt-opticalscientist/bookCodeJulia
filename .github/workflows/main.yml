@@ -23,7 +23,11 @@ jobs:
         run: julia --project=@. -e 'using Pkg; Pkg.instantiate(); Pkg.add("JET")'
       - name: Run JET
         working-directory: ./OpticalWavePropSim
-        run: julia --project=@. -e 'using JET; report_package("OpticalWavePropSim")'
+        run: |
+          julia --project=@. -e '
+          using OptialWavePropSim, JET;
+          report_package(OpticalWavePropSim)
+          '
 
   lint:
     name: Formatting Suggestions
