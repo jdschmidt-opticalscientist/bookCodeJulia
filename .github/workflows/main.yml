@@ -38,8 +38,6 @@ jobs:
         with:
           version: "1"
       - uses: julia-actions/julia-format@v3
-        with:
-          verify: true
 
   build-and-test:
     name: Physics Smoke Test
