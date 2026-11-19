@@ -24,6 +24,9 @@ export ft,
     corr2_ft,
     str_fcn2_ft,
     zernike,
+    noll_to_nm,
+    _zrf,
+    fresnel_integrals,
     fraunhofer_prop,
     ang_spec_multi_prop,
     ang_spec_prop,
@@ -573,18 +576,18 @@ end
 
 function noll_to_nm(j)
     # Corrected Noll to (n, m) mapping
+    # Noll ordering groups modes by radial degree n and orders |m| within
+    # each row as 0, 2, 2, 4, 4, ... for even n and 1, 1, 3, 3, ... for odd n.
     n = Int(floor((sqrt(8 * j - 7) - 1) / 2))
-    m_abs = j - n * (n + 1) ÷ 2 - 1
+    p = j - div(n * (n + 1), 2)
 
     if n % 2 == 0
-        m = 2 * (m_abs ÷ 2)
+        m_abs = 2 * div(p, 2)
     else
-        m = 2 * ((m_abs + 1) ÷ 2) - 1
+        m_abs = 2 * div(p - 1, 2) + 1
     end
 
-    if j % 2 > 0
-        m = -m
-    end
+    m = (j % 2 != 0) ? -m_abs : m_abs
     return n, m
 end
 
